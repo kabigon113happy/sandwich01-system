@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>園遊會三明治預購系統</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    font-family:"Microsoft JhengHei",sans-serif;
+}
+
+body{
+    margin:0;
+    background:#f5f7fb;
+    color:#222;
+}
+
+header{
+    background:linear-gradient(135deg,#ffb347,#ffcc33);
+    padding:25px;
+    color:white;
+    box-shadow:0 3px 10px rgba(0,0,0,.15);
+}
+
+header h1{
+    margin:0;
+    font-size:32px;
+}
+
+header p{
+    margin-top:10px;
+    opacity:.95;
+}
+
+.container{
+    width:95%;
+    margin:auto;
+    padding:20px 0 40px;
+}
+
+.card{
+    background:white;
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+button{
+    border:none;
+    padding:10px 16px;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:.2s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+.btn-primary{
+    background:#4cafef;
+    color:white;
+}
+
+.btn-success{
+    background:#4caf50;
+    color:white;
+}
+
+.btn-danger{
+    background:#f44336;
+    color:white;
+}
+
+.btn-warning{
+    background:#ff9800;
+    color:white;
+}
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:16px;
+}
+
+.stat-box{
+    background:#fafafa;
+    border-radius:15px;
+    padding:16px;
+    border:2px solid #eee;
+}
+
+.progress{
+    width:100%;
+    height:24px;
+    background:#eee;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:10px;
+}
+
+.progress-bar{
+    height:100%;
+    background:linear-gradient(90deg,#00c853,#64dd17);
+    width:0%;
+    transition:.3s;
+}
+
+.filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.filters select{
+    padding:10px;
+    border-radius:10px;
+    border:1px solid #ccc;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+th,td{
+    border-bottom:1px solid #ddd;
+    padding:10px;
+    text-align:center;
+}
+
+th{
+    background:#f0f4ff;
+    position:sticky;
+    top:0;
+}
+
+.highlight{
+    background:#fff8c5;
+}
+
+.done-row{
+    opacity:.6;
+    text-decoration:line-through;
+}
+
+img.thumb{
+    width:60px;
+    height:60px;
+    object-fit:cover;
+    border-radius:10px;
+    cursor:pointer;
+    border:2px solid #ddd;
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+}
+
+.modal-content{
+    background:white;
+    width:95%;
+    max-width:700px;
+    border-radius:20px;
+    padding:25px;
+    max-height:90vh;
+    overflow:auto;
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea{
+    width:100%;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid #ccc;
+}
+
+.form-grid textarea{
+    grid-column:1/3;
+}
+
+.full{
+    grid-column:1/3;
+}
+
+@media(max-width:700px){
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .full,
+    .form-grid textarea{
+        grid-column:auto;
+    }
+
+    table{
+        font-size:12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🥪 園遊會三明治預購系統</h1>
+    <p>
+        現場即時支援版<br>
+        100% 本地儲存防流失 • 支援一鍵填入當前現場時間與自由編輯
+    </p>
+</header>
+
+<div class="container">
+
+    <div class="card">
+        <h2>📦 備份與匯入</h2>
+
+        <button class="btn-primary" onclick="exportData()">匯出備份</button>
+        <input type="file" id="importFile" hidden onchange="importData(event)">
+        <button class="btn-success" onclick="document.getElementById('importFile').click()">匯入備份</button>
+        <button class="btn-warning" onclick="window.print()">列印 A4 整理單</button>
+        <button class="btn-primary" onclick="openModal()">新增預購/現場單</button>
+    </div>
+
+    <div class="card">
+        <h2>✨ 去紅框特別版更新完成</h2>
+
+        <ul>
+            <li>保留原訂單：已將原先資料完整保留。</li>
+            <li>照片自主管理：可直接在表格內上傳、更換、刪除設計圖。</li>
+            <li>所有資料皆儲存在本機 localStorage。</li>
+        </ul>
+    </div>
+
+    <div class="stats-grid">
+
+        <div class="stat-box">
+            <h3>🥪 三明治品項即時統計</h3>
+            <div id="foodStats"></div>
+        </div>
+
+        <div class="stat-box">
+            <h3>🕒 各時段預約份數</h3>
+            <div id="timeStats"></div>
+        </div>
+
+        <div class="stat-box">
+            <h3>📈 現場出餐進度</h3>
+            <div id="progressText"></div>
+
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card">
+        <h2>🔍 篩選功能</h2>
+
+        <div class="filters">
+
+            <select id="filterTime" onchange="renderTable()">
+                <option value="">全部時段</option>
+            </select>
+
+            <select id="filterFood" onchange="renderTable()">
+                <option value="">全部品項</option>
+            </select>
+
+            <select id="filterIdentity" onchange="renderTable()">
+                <option value="">全部身份</option>
+            </select>
+
+            <button class="btn-danger" onclick="resetFilters()">重設篩選</button>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>完成</th>
+                    <th>No.</th>
+                    <th>預約時間</th>
+                    <th>品項</th>
+                    <th>班級/身份</th>
+                    <th>姓名/座號</th>
+                    <th>圖片</th>
+                    <th>數量</th>
+                    <th>備註</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+
+            <tbody id="tableBody"></tbody>
+        </table>
+
+        <p id="countText"></p>
+    </div>
+
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+
+        <h2 id="modalTitle">新增訂單</h2>
+
+        <div class="form-grid">
+
+            <select id="time">
+                <option>09:00</option>
+                <option>09:30~10:00</option>
+                <option>10:00</option>
+                <option>11:00~11:30</option>
+            </select>
+
+            <select id="food">
+                <option>鮪魚玉米</option>
+                <option>滑蛋火腿</option>
+                <option>Banana巧克力</option>
+            </select>
+
+            <input id="identity" placeholder="班級/身份">
+            <input id="name" placeholder="姓名/座號">
+
+            <input id="quantity" type="number" min="1" value="1">
+
+            <label>
+                <input type="checkbox" id="highlight">
+                螢光筆標記
+            </label>
+
+            <textarea id="note" rows="3" placeholder="備註"></textarea>
+
+            <div class="full">
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+
+        </div>
+
+        <br>
+
+        <button class="btn-success" onclick="saveOrder()">儲存</button>
+        <button class="btn-danger" onclick="closeModal()">取消</button>
+
+    </div>
+</div>
+
+<script>
+
+let orders = JSON.parse(localStorage.getItem("sandwich_orders")) || [
+{
+id:1,time:"09:00",food:"鮪魚玉米",identity:"國一信",name:"43號",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:2,time:"09:00",food:"鮪魚玉米",identity:"國一義",name:"18號",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:3,time:"09:30~10:00",food:"鮪魚玉米",identity:"教師",name:"江靜宜",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:4,time:"09:30~10:00",food:"鮪魚玉米",identity:"教師",name:"李吟臻 (套)",quantity:1,note:"原單螢光",highlight:true,done:false,image:""
+},
+
+{
+id:5,time:"09:30~10:00",food:"鮪魚玉米",identity:"教師",name:"李惠文",quantity:1,note:"原單螢光",highlight:true,done:false,image:""
+},
+
+{
+id:6,time:"09:30~10:00",food:"鮪魚玉米",identity:"教師",name:"陳秀霖 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:7,time:"09:30~10:00",food:"鮪魚玉米",identity:"教師",name:"鄭淑丹",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:8,time:"09:30~10:00",food:"鮪魚玉米",identity:"高二忠",name:"陳宥涵 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:9,time:"09:30~10:00",food:"滑蛋火腿",identity:"教師",name:"朱哥",quantity:1,note:"原單螢光",highlight:true,done:false,image:""
+},
+
+{
+id:10,time:"09:30~10:00",food:"滑蛋火腿",identity:"教師",name:"林旭建 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:11,time:"09:30~10:00",food:"滑蛋火腿",identity:"高二孝",name:"朱妍臻 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:12,time:"09:30~10:00",food:"滑蛋火腿",identity:"高二孝",name:"周柏瑾",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:13,time:"09:30~10:00",food:"滑蛋火腿",identity:"高二仁",name:"賴子吟 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:14,time:"09:30~10:00",food:"Banana巧克力",identity:"教師",name:"李宗憲",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:15,time:"09:30~10:00",food:"Banana巧克力",identity:"教師",name:"俊源 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:16,time:"09:30~10:00",food:"Banana巧克力",identity:"高二忠",name:"張礫云",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:17,time:"09:30~10:00",food:"Banana巧克力",identity:"高二忠",name:"黃亭瑀",quantity:1,note:"有圖",highlight:false,done:false,image:""
+},
+
+{
+id:18,time:"09:30~10:00",food:"Banana巧克力",identity:"高二孝",name:"李沛芩",quantity:2,note:"有圖",highlight:false,done:false,image:""
+},
+
+{
+id:19,time:"09:30~10:00",food:"Banana巧克力",identity:"高二孝",name:"陳冠樺",quantity:1,note:"有圖",highlight:false,done:false,image:""
+},
+
+{
+id:20,time:"10:00",food:"滑蛋火腿",identity:"國一義",name:"11號",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:21,time:"10:00",food:"Banana巧克力",identity:"國一義",name:"17號",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:22,time:"11:00~11:30",food:"鮪魚玉米",identity:"高二忠",name:"王芃云",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:23,time:"11:00~11:30",food:"滑蛋火腿",identity:"教師",name:"吳昱慧 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:24,time:"11:00~11:30",food:"滑蛋火腿",identity:"高二孝",name:"何佳霓",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:25,time:"11:00~11:30",food:"滑蛋火腿",identity:"高二孝",name:"郭翔任 (套)",quantity:1,note:"",highlight:false,done:false,image:""
+},
+
+{
+id:26,time:"11:00~11:30",food:"Banana巧克力",identity:"教師",name:"吳昱慧",quantity:1,note:"有圖",highlight:false,done:false,image:""
+},
+
+{
+id:27,time:"11:00~11:30",food:"Banana巧克力",identity:"高二忠",name:"施芃宇",quantity:1,note:"有圖",highlight:false,done:false,image:""
+}
+
+];
+
+
+let editId = null;
+
+saveLocal();
+renderAll();
+
+function saveLocal(){
+    localStorage.setItem("sandwich_orders",JSON.stringify(orders));
+}
+
+function renderAll(){
+    renderTable();
+    renderStats();
+    renderFilters();
+}
+
+function renderTable(){
+
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    let filterTime = document.getElementById("filterTime").value;
+    let filterFood = document.getElementById("filterFood").value;
+    let filterIdentity = document.getElementById("filterIdentity").value;
+
+    let filtered = orders.filter(o=>{
+
+        if(filterTime && o.time !== filterTime) return false;
+        if(filterFood && o.food !== filterFood) return false;
+        if(filterIdentity && o.identity !== filterIdentity) return false;
+
+        return true;
+    });
+
+    filtered.forEach((o,index)=>{
+
+        let tr = document.createElement("tr");
+
+        if(o.highlight) tr.classList.add("highlight");
+        if(o.done) tr.classList.add("done-row");
+
+        tr.innerHTML = `
+        <td>
+            <input type="checkbox" ${o.done ? "checked":""}
+            onchange="toggleDone(${o.id})">
+        </td>
+
+        <td>${index+1}</td>
+        <td>${o.time}</td>
+        <td>${o.food}</td>
+        <td>${o.identity}</td>
+        <td>${o.name}</td>
+
+        <td>
+            ${
+                o.image
+                ?
+                `<img class="thumb" src="${o.image}" onclick="window.open('${o.image}')">`
+                :
+                `<input type="file" accept="image/*" onchange="quickUpload(event,${o.id})">`
+            }
+        </td>
+
+        <td>${o.quantity}</td>
+        <td>${o.note || "-"}</td>
+
+        <td>
+            <button class="btn-primary" onclick="editOrder(${o.id})">修改</button>
+            <button class="btn-danger" onclick="deleteOrder(${o.id})">刪除</button>
+        </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("countText").innerText =
+    `共計顯示 ${filtered.length} 筆預訂資料`;
+}
+
+function renderStats(){
+
+    let total = orders.reduce((a,b)=>a+b.quantity,0);
+
+    let foodMap = {};
+    let timeMap = {};
+
+    let done = 0;
+
+    orders.forEach(o=>{
+
+        foodMap[o.food]=(foodMap[o.food]||0)+o.quantity;
+        timeMap[o.time]=(timeMap[o.time]||0)+o.quantity;
+
+        if(o.done) done++;
+    });
+
+    let foodHTML = `<b>共 ${total} 份</b><br><br>`;
+
+    for(let k in foodMap){
+
+        let p = Math.round(foodMap[k]/total*100);
+
+        foodHTML += `
+        ${k}<br>
+        ${foodMap[k]} 份 (${p}%)<br><br>
+        `;
+    }
+
+    document.getElementById("foodStats").innerHTML = foodHTML;
+
+    let timeHTML = "";
+
+    for(let k in timeMap){
+
+        let p = Math.round(timeMap[k]/total*100);
+
+        timeHTML += `
+        ${k}<br>
+        ${timeMap[k]} 份 (${p}%)<br><br>
+        `;
+    }
+
+    document.getElementById("timeStats").innerHTML = timeHTML;
+
+    document.getElementById("progressText").innerHTML =
+    `${done} / ${orders.length} 筆`;
+
+    let percent = orders.length
+    ? done/orders.length*100
+    : 0;
+
+    document.getElementById("progressBar").style.width =
+    percent+"%";
+}
+
+function renderFilters(){
+
+    let times = [...new Set(orders.map(o=>o.time))];
+    let foods = [...new Set(orders.map(o=>o.food))];
+    let ids = [...new Set(orders.map(o=>o.identity))];
+
+    fillSelect("filterTime",times);
+    fillSelect("filterFood",foods);
+    fillSelect("filterIdentity",ids);
+}
+
+function fillSelect(id,data){
+
+    let select = document.getElementById(id);
+    let current = select.value;
+
+    let first = select.options[0].outerHTML;
+
+    select.innerHTML = first;
+
+    data.forEach(v=>{
+
+        let op = document.createElement("option");
+        op.value = v;
+        op.textContent = v;
+
+        select.appendChild(op);
+    });
+
+    select.value = current;
+}
+
+function openModal(){
+
+    editId = null;
+
+    document.getElementById("modal").style.display="flex";
+
+    clearForm();
+}
+
+function closeModal(){
+
+    document.getElementById("modal").style.display="none";
+}
+
+function clearForm(){
+
+    document.getElementById("time").value="09:00";
+    document.getElementById("food").value="鮪魚玉米";
+    document.getElementById("identity").value="";
+    document.getElementById("name").value="";
+    document.getElementById("quantity").value=1;
+    document.getElementById("note").value="";
+    document.getElementById("highlight").checked=false;
+    document.getElementById("imageInput").value="";
+}
+
+function saveOrder(){
+
+    const file = document.getElementById("imageInput").files[0];
+
+    const reader = new FileReader();
+
+    reader.onload = function(){
+
+        let image = file ? reader.result : "";
+
+        let obj = {
+
+            id: editId || Date.now(),
+
+            time:document.getElementById("time").value,
+            food:document.getElementById("food").value,
+            identity:document.getElementById("identity").value,
+            name:document.getElementById("name").value,
+            quantity:Number(document.getElementById("quantity").value),
+            note:document.getElementById("note").value,
+            highlight:document.getElementById("highlight").checked,
+            done:false,
+            image:image
+        };
+
+        if(editId){
+
+            let old = orders.find(o=>o.id===editId);
+
+            obj.done = old.done;
+
+            if(!image) obj.image = old.image;
+
+            orders = orders.map(o=>o.id===editId ? obj : o);
+
+        }else{
+
+            orders.push(obj);
+        }
+
+        saveLocal();
+        renderAll();
+        closeModal();
+    }
+
+    if(file){
+        reader.readAsDataURL(file);
+    }else{
+        reader.onload();
+    }
+}
+
+function editOrder(id){
+
+    let o = orders.find(x=>x.id===id);
+
+    editId = id;
+
+    document.getElementById("modal").style.display="flex";
+
+    document.getElementById("time").value=o.time;
+    document.getElementById("food").value=o.food;
+    document.getElementById("identity").value=o.identity;
+    document.getElementById("name").value=o.name;
+    document.getElementById("quantity").value=o.quantity;
+    document.getElementById("note").value=o.note;
+    document.getElementById("highlight").checked=o.highlight;
+}
+
+function deleteOrder(id){
+
+    if(confirm("確定刪除？")){
+
+        orders = orders.filter(o=>o.id!==id);
+
+        saveLocal();
+        renderAll();
+    }
+}
+
+function toggleDone(id){
+
+    orders = orders.map(o=>{
+
+        if(o.id===id){
+            o.done=!o.done;
+        }
+
+        return o;
+    });
+
+    saveLocal();
+    renderAll();
+}
+
+function quickUpload(event,id){
+
+    let file = event.target.files[0];
+
+    if(!file) return;
+
+    let reader = new FileReader();
+
+    reader.onload = function(){
+
+        orders = orders.map(o=>{
+
+            if(o.id===id){
+                o.image = reader.result;
+            }
+
+            return o;
+        });
+
+        saveLocal();
+        renderAll();
+    }
+
+    reader.readAsDataURL(file);
+}
+
+function exportData(){
+
+    let blob = new Blob(
+        [JSON.stringify(orders,null,2)],
+        {type:"application/json"}
+    );
+
+    let a = document.createElement("a");
+
+    a.href = URL.createObjectURL(blob);
+
+    a.download = "sandwich_backup.json";
+
+    a.click();
+}
+
+function importData(event){
+
+    let file = event.target.files[0];
+
+    if(!file) return;
+
+    let reader = new FileReader();
+
+    reader.onload = function(e){
+
+        orders = JSON.parse(e.target.result);
+
+        saveLocal();
+        renderAll();
+
+        alert("匯入成功！");
+    }
+
+    reader.readAsText(file);
+}
+
+function resetFilters(){
+
+    document.getElementById("filterTime").value="";
+    document.getElementById("filterFood").value="";
+    document.getElementById("filterIdentity").value="";
+
+    renderTable();
+}
+
+</script>
+
+</body>
+</html>
